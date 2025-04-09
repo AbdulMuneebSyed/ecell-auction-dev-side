@@ -1,12 +1,19 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import axios from 'axios';
 import PlayerInput from './PlayerInput';
 
 interface Team {
   teamName: string;
+  teamId: string;
   teamRating: number;
   teamBalance: number;
+}
+
+interface SellPlayerStruct {
+  playerId: string;
+  playerName: string;
 }
 
 export default function SellPlayerForm() {
@@ -14,17 +21,56 @@ export default function SellPlayerForm() {
   const [price, setPrice] = useState('');
   const [team, setTeam] = useState('');
   const [teams, setTeams] = useState<Team[]>([]);
+  const [players, setPlayers] = useState<SellPlayerStruct[]>([]);
   const [showTeamSuggestions, setShowTeamSuggestions] = useState(false);
   const [filteredTeams, setFilteredTeams] = useState<Team[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [message, setMessage] = useState('');
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Fetch teams from API
-    fetch('/api/team-rankings')
-      .then(res => res.json())
-      .then(data => setTeams(data))
-      .catch(err => console.error('Error fetching teams:', err));
+    // Function to fetch data
+    const fetchData = async () => {
+      setLoading(true);
+      try {
+        // Fetch teams from API
+        const teamsResponse = await fetch('/api/team-rankings');
+        const teamsData = await teamsResponse.json();
+        setTeams(teamsData);
+        
+        // Fetch all players data (across all pages)
+        let allPlayers: SellPlayerStruct[] = [];
+        const totalPages = 5; // Assuming the total number of pages is 5
+        for (let page = 1; page <= totalPages; page++) {
+          const playersResponse = await fetch("http://localhost:8080/api/players", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json"
+            },
+            body: JSON.stringify({ page })
+          });
+
+          const playersData = await playersResponse.json();
+
+          // Assuming the response structure has players data
+          if (playersData && Array.isArray(playersData.data)) {
+            allPlayers = [...allPlayers, ...playersData.data];
+          } else {
+            console.error('Unexpected players data format:', playersData);
+          }
+        }
+
+        setPlayers(allPlayers);
+        console.log(allPlayers)
+      } catch (error) {
+        console.error('Error fetching data:', error);
+        setMessage('Failed to load data. Please refresh the page.');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
   }, []);
 
   useEffect(() => {
@@ -61,31 +107,49 @@ export default function SellPlayerForm() {
     setMessage('');
 
     try {
-      const response = await fetch('/api/sell-player', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          name: playerName,
-          price: parseInt(price),
-          team
-        }),
-      });
+      // Find player ID based on name
+      console.log("players are ", players)
+      const playerObj = players.find(p => p.playerName.toLowerCase() === playerName.toLowerCase());
+      if (!playerObj) {
+        setMessage('Error: Player not found');
+        setIsSubmitting(false);
+        return;
+      }
 
-      const data = await response.json();
+      // Find team ID based on name
+      const teamObj = teams.find(t => t.teamName.toLowerCase() === team.toLowerCase());
+      if (!teamObj) {
+        setMessage('Error: Team not found');
+        setIsSubmitting(false);
+        return;
+      }
+
+      // Create request payload with IDs
+      const payload = {
+        playerId: playerObj.playerId,
+        teamID: teamObj.teamId,
+        soldPrice: parseInt(price)
+      };
+
+      // Make POST request using axios
+      const response = await axios.post('http://localhost:8080/api/sell-player', payload);
       
-      if (data.success) {
-        setMessage(`Success: ${data.message}`);
+      if (response.data.success) {
+        setMessage(`Success: ${response.data.message || 'Player sold successfully'}`);
         // Reset form
         setPlayerName('');
         setPrice('');
         setTeam('');
       } else {
-        setMessage(`Error: ${data.message}`);
+        setMessage(`Error: ${response.data.message || 'Failed to sell player'}`);
       }
     } catch (error) {
-      setMessage('Failed to sell player. Please try again.');
+      if (axios.isAxiosError(error) && error.response) {
+        // Handle structured error response from server
+        setMessage(`Error: ${error.response.data.message || 'Failed to sell player'}`);
+      } else {
+        setMessage('Failed to sell player. Please try again.');
+      }
       console.error('Error:', error);
     } finally {
       setIsSubmitting(false);
@@ -141,7 +205,7 @@ export default function SellPlayerForm() {
         disabled={isSubmitting}
         className="w-full py-2 px-4 bg-blue-600 text-white rounded hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50 disabled:opacity-50"
       >
-        {isSubmitting ? 'Processing...' : 'Sell this person'}
+        {isSubmitting ? 'Processing...' : 'Sell this player'}
       </button>
       
       {message && (
