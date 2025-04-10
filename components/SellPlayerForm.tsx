@@ -32,8 +32,8 @@ export default function SellPlayerForm() {
     const fetchData = async () => {
       setLoading(true);
       try {
-        // Fetch teams from API
-        const teamsResponse = await fetch("http://192.168.1.6:8080/api/teams", {
+        // Use consistent localhost endpoint instead of IP address
+        const teamsResponse = await fetch("http://localhost:8080/api/teams", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
@@ -70,6 +70,7 @@ export default function SellPlayerForm() {
       setFilteredTeams([]);
     } else {
       const filtered = teams.filter((t) => {
+        // Make sure teamName exists before trying to use it
         return (
           t.teamName && t.teamName.toLowerCase().includes(team.toLowerCase())
         );
@@ -128,7 +129,7 @@ export default function SellPlayerForm() {
 
       // Make POST request using axios
       const response = await axios.post(
-        "http://192.168.1.6:8080/api/sell-player",
+        "http://localhost:8080/api/sell-player",
         payload
       );
 

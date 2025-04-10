@@ -33,11 +33,17 @@ export default function PlayerInput({
 
   // Fetch players from the API
   useEffect(() => {
-    fetch("http://192.168.1.6:8080/api/unsold-players")
+    fetch("http://localhost:8080/api/unsold-players", {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+      },
+    })
       .then((res) => res.json())
       .then((data) => {
         console.log("API Response for players:", data);
 
+        // Handle different response structures
         if (Array.isArray(data)) {
           setPlayers(data);
           console.log("Set players:", data);
@@ -90,11 +96,12 @@ export default function PlayerInput({
       setFilteredPlayers([]);
     } else {
       const filtered = players.filter((player) => {
+        // Normalize player name access by checking all possible properties
         const playerName = player.name || player.playerName || "";
         return playerName.toLowerCase().includes(value.toLowerCase());
       });
-      setFilteredPlayers(filtered);
       console.log("Filtered players:", filtered);
+      setFilteredPlayers(filtered);
     }
     setHighlightIndex(-1); // reset highlighted index when value changes
   }, [value, players]);
@@ -115,8 +122,8 @@ export default function PlayerInput({
   };
 
   const handleSelectPlayer = (player: Player) => {
-    const playerName = player.name || player.playerName || "";
-    const playerId = player._id || player.id || player.playerId || "";
+    const playerName = player.playerName || "";
+    const playerId = player._id || "";
     onChange(playerName);
     if (onSelectPlayer) {
       onSelectPlayer(playerId, playerName);
@@ -172,7 +179,9 @@ export default function PlayerInput({
             return (
               <div
                 key={index}
-                ref={(el) => (itemRefs.current[index] = el)}
+                ref={(el) => {
+                  itemRefs.current[index] = el;
+                }}
                 onClick={() => handleSelectPlayer(player)}
                 className={`px-3 py-2 cursor-pointer text-black ${
                   isHighlighted

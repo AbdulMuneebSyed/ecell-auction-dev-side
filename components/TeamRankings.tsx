@@ -21,7 +21,7 @@ export default function TeamRankings() {
 
   const fetchTeams = () => {
     setLoading(true);
-    fetch("http://192.168.1.6:8080/api/teams", {
+    fetch("http://localhost:8080/api/teams", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
