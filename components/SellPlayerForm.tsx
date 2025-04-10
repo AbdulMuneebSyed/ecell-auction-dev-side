@@ -14,6 +14,11 @@ interface Team {
   teamBalance?: number;
 }
 
+interface SellPlayerStruct{
+  playerId: string;
+  playerName: string;
+}
+
 export default function SellPlayerForm() {
   const [playerName, setPlayerName] = useState("");
   const [selectedPlayerId, setSelectedPlayerId] = useState("");
@@ -21,6 +26,8 @@ export default function SellPlayerForm() {
   const [team, setTeam] = useState("");
   const [selectedTeamId, setSelectedTeamId] = useState("");
   const [teams, setTeams] = useState<Team[]>([]);
+  const [players, setPlayers] = useState<SellPlayerStruct[]>([]);
+  const [unsoldPlayers, setUnsoldPlayers] = useState<SellPlayerStruct[]>([]);
   const [showTeamSuggestions, setShowTeamSuggestions] = useState(false);
   const [filteredTeams, setFilteredTeams] = useState<Team[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -29,11 +36,12 @@ export default function SellPlayerForm() {
 
   useEffect(() => {
     // Function to fetch data
-    const fetchData = async () => {
+    const fetchTeamData = async () => {
       setLoading(true);
       try {
         // Fetch teams from API
-        const teamsResponse = await fetch("http://192.168.1.6:8080/api/teams", {
+        // const teamsResponse = await fetch("http://192.168.1.6:8080/api/teams", {
+          const teamsResponse = await fetch("http://localhost:8080/api/teams", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
@@ -60,8 +68,42 @@ export default function SellPlayerForm() {
         setLoading(false);
       }
     };
+    const fetchPlayerData = async () => {
+      setLoading(true);
+      try {
+        // Fetch all players from API
+        // const playersResponse = await fetch("http://192.168.1.6:8080/api/fetch-players-for-sell-player", {
+          const playersResponse = await fetch("http://localhost:8080/api/fetch-players-for-sell-player", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+        });
+        const playersData = await playersResponse.json();
+        console.log("API Response for players:", playersData);
 
-    fetchData();
+        if (playersData.success && Array.isArray(playersData.data)) {
+          setPlayers(playersData.data);
+        } else if (Array.isArray(playersData)) {
+          setPlayers(playersData);
+        } else {
+          console.error(
+            "Failed to fetch teams data or unexpected format:",
+            playersData
+          );
+          setTeams([]);
+        }
+      } catch (error) {
+        console.error("Error fetching data:", error);
+        setMessage("Failed to load data. Please refresh the page.");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchTeamData();
+    fetchPlayerData();
+    // fetchUnsoldPlayerData();
   }, []);
 
   useEffect(() => {
@@ -128,7 +170,8 @@ export default function SellPlayerForm() {
 
       // Make POST request using axios
       const response = await axios.post(
-        "http://192.168.1.6:8080/api/sell-player",
+        // "http://192.168.1.6:8080/api/sell-player",
+        "http://localhost:8080/api/sell-player",
         payload
       );
 
@@ -179,6 +222,7 @@ export default function SellPlayerForm() {
           value={playerName}
           onChange={setPlayerName}
           onSelectPlayer={handleSelectPlayer}
+          players={players} // Pass the players data to the component
         />
         {selectedPlayerId && (
           <div className="mt-1 text-xs text-green-600">
