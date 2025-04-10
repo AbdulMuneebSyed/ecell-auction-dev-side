@@ -15,12 +15,14 @@ interface PlayerInputProps {
   value: string;
   onChange: (value: string) => void;
   onSelectPlayer?: (playerId: string, playerName: string) => void;
+  players?: Player[]; 
 }
 
 export default function PlayerInput({
   value,
   onChange,
   onSelectPlayer,
+  players: propPlayers, // Rename to avoid conflict with state
 }: PlayerInputProps) {
   const [players, setPlayers] = useState<Player[]>([]);
   const [filteredPlayers, setFilteredPlayers] = useState<Player[]>([]);
@@ -31,7 +33,7 @@ export default function PlayerInput({
   const suggestionsRef = useRef<HTMLDivElement>(null);
   const itemRefs = useRef<(HTMLDivElement | null)[]>([]);
 
-  // Fetch players from the API
+  // Use players from props if available, otherwise fetch them
   useEffect(() => {
     fetch("http://localhost:8080/api/unsold-players", {
       method: "GET",
@@ -67,6 +69,7 @@ export default function PlayerInput({
         console.error("Error fetching players:", err);
         setPlayers([]);
       });
+
 
     // Close suggestions when clicking outside
     const handleClickOutside = (event: MouseEvent) => {
